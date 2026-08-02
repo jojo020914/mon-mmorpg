@@ -45,22 +45,69 @@
         .menu-btn:hover { background: #218838; transform: scale(1.03); }
         .btn-secondary { background: #4a5568; }
         .btn-secondary:hover { background: #3b4252; }
+        
+        .btn-return {
+            background: #dc3545;
+            color: white;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        .btn-return:hover { background: #c82333; }
 
         /* Styles pour le jeu */
-        #gameArea { display: none; }
+        #gameArea { display: none; margin-top: 20px; }
         canvas { background: #222; border: 2px solid #555; display: block; margin: 10px auto; }
         
+        /* Fenêtres Modales / Pop-ups */
         .modal {
             display: none;
             position: absolute;
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
             background: #222;
-            padding: 20px;
-            border-radius: 10px;
-            border: 1px solid #666;
+            padding: 25px;
+            border-radius: 12px;
+            border: 2px solid #666;
+            box-shadow: 0 0 15px rgba(0,0,0,0.9);
             z-index: 10;
+            width: 280px;
         }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn-confirm-yes {
+            background: #dc3545;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 50%;
+        }
+        .btn-confirm-yes:hover { background: #c82333; }
+
+        .btn-confirm-no {
+            background: #6c757d;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 50%;
+        }
+        .btn-confirm-no:hover { background: #5a6268; }
     </style>
 </head>
 <body>
@@ -73,6 +120,16 @@
         <button class="menu-btn" onclick="startGame()">▶️ JOUER</button>
         <button class="menu-btn btn-secondary" onclick="openModal('characterModal')">👤 PERSONNAGE</button>
         <button class="menu-btn btn-secondary" onclick="openModal('settingsModal')">⚙️ RÉGLAGES</button>
+    </div>
+
+    <!-- FENÊTRE CONFIRMATION QUITTER -->
+    <div id="confirmExitModal" class="modal">
+        <h2>⚠️ Confirmation</h2>
+        <p>Es-tu sûr de vouloir retourner au menu principal ?</p>
+        <div class="modal-buttons">
+            <button class="btn-confirm-yes" onclick="confirmExit()">Oui, quitter</button>
+            <button class="btn-confirm-no" onclick="closeModal('confirmExitModal')">Non, rester</button>
+        </div>
     </div>
 
     <!-- FENÊTRE PERSONNAGE -->
@@ -91,7 +148,7 @@
 
     <!-- ZONE DE JEU -->
     <div id="gameArea">
-        <h1>🕹️ Bon jeu !</h1>
+        <button class="btn-return" onclick="askExit()">🏠 Retour au Menu</button>
         <canvas id="gameCanvas" width="600" height="400"></canvas>
     </div>
 
@@ -101,7 +158,21 @@
         function startGame() {
             document.getElementById('mainMenu').style.display = 'none';
             document.getElementById('gameArea').style.display = 'block';
-            initGame();
+            if (!socket) {
+                initGame();
+            }
+        }
+
+        // Demander la confirmation
+        function askExit() {
+            openModal('confirmExitModal');
+        }
+
+        // Valider la sortie vers le menu
+        function confirmExit() {
+            closeModal('confirmExitModal');
+            document.getElementById('gameArea').style.display = 'none';
+            document.getElementById('mainMenu').style.display = 'block';
         }
 
         function openModal(id) { document.getElementById(id).style.display = 'block'; }
@@ -124,7 +195,11 @@
             socket.on('disconnectPlayer', (id) => { delete players[id]; draw(); });
 
             window.addEventListener('keydown', (e) => {
+                // Si le jeu n'est pas affiché ou si une fenêtre de confirmation est ouverte, on ignore les touches
+                if (document.getElementById('gameArea').style.display === 'none') return;
+                if (document.getElementById('confirmExitModal').style.display === 'block') return;
                 if (!myId || !players[myId]) return;
+
                 let moved = false;
                 const speed = 5;
                 if (e.key === 'ArrowUp' || e.key === 'z') { players[myId].y -= speed; moved = true; }
