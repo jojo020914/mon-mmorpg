@@ -4,30 +4,140 @@
     <meta charset="UTF-8">
     <title>Mon MMORPG Web</title>
     <style>
-        body { margin: 0; background: #111; color: white; text-align: center; font-family: sans-serif; }
-        canvas { background: #222; border: 2px solid #555; display: block; margin: 20px auto; }
+        body { 
+            margin: 0; 
+            background: #111; 
+            color: white; 
+            text-align: center; 
+            font-family: 'Arial', sans-serif; 
+            overflow: hidden;
+        }
+
+        /* Styles de l'écran d'accueil */
+        #mainMenu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(20, 20, 20, 0.9);
+            padding: 40px;
+            border-radius: 15px;
+            border: 2px solid #444;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            width: 320px;
+        }
+
+        .menu-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin: 12px 0;
+            background: #28a745;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .menu-btn:hover { background: #218838; transform: scale(1.03); }
+        .btn-secondary { background: #4a5568; }
+        .btn-secondary:hover { background: #3b4252; }
+
+        /* Styles pour le jeu */
+        #gameArea { display: none; }
+        canvas { background: #222; border: 2px solid #555; display: block; margin: 10px auto; }
+        
+        .modal {
+            display: none;
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: #222;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #666;
+            z-index: 10;
+        }
     </style>
 </head>
 <body>
-    <h1>🕹️ Bienvenue dans mon MMORPG !</h1>
-    <p>Utilise les flèches du clavier ou ZQSD pour te déplacer.</p>
-    <canvas id="gameCanvas" width="600" height="400"></canvas>
+
+    <!-- ÉCRAN D'ACCUEIL -->
+    <div id="mainMenu">
+        <h1>⚔️ MYTHIC ONLINE</h1>
+        <p>Entrez dans la légende</p>
+
+        <button class="menu-btn" onclick="startGame()">▶️ JOUER</button>
+        <button class="menu-btn btn-secondary" onclick="openModal('characterModal')">👤 PERSONNAGE</button>
+        <button class="menu-btn btn-secondary" onclick="openModal('settingsModal')">⚙️ RÉGLAGES</button>
+    </div>
+
+    <!-- FENÊTRE PERSONNAGE -->
+    <div id="characterModal" class="modal">
+        <h2>👤 Choix du Personnage</h2>
+        <p>Sélectionne ton style ou ton pseudo (À venir)</p>
+        <button class="menu-btn btn-secondary" onclick="closeModal('characterModal')">Fermer</button>
+    </div>
+
+    <!-- FENÊTRE RÉGLAGES -->
+    <div id="settingsModal" class="modal">
+        <h2>⚙️ Réglages</h2>
+        <p>Volume, Contrôles, Graphismes (À venir)</p>
+        <button class="menu-btn btn-secondary" onclick="closeModal('settingsModal')">Fermer</button>
+    </div>
+
+    <!-- ZONE DE JEU -->
+    <div id="gameArea">
+        <h1>🕹️ Bon jeu !</h1>
+        <canvas id="gameCanvas" width="600" height="400"></canvas>
+    </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io();
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
+        // Fonctions du Menu
+        function startGame() {
+            document.getElementById('mainMenu').style.display = 'none';
+            document.getElementById('gameArea').style.display = 'block';
+            initGame();
+        }
 
+        function openModal(id) { document.getElementById(id).style.display = 'block'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+        // Code du Jeu
+        let socket, canvas, ctx;
         let players = {};
         let myId = null;
 
-        socket.on('connect', () => { myId = socket.id; });
+        function initGame() {
+            socket = io();
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
 
-        socket.on('currentPlayers', (serverPlayers) => { players = serverPlayers; draw(); });
-        socket.on('newPlayer', (data) => { players[data.id] = data.player; draw(); });
-        socket.on('playerMoved', (data) => { if(players[data.id]) players[data.id] = data.player; draw(); });
-        socket.on('disconnectPlayer', (id) => { delete players[id]; draw(); });
+            socket.on('connect', () => { myId = socket.id; });
+            socket.on('currentPlayers', (serverPlayers) => { players = serverPlayers; draw(); });
+            socket.on('newPlayer', (data) => { players[data.id] = data.player; draw(); });
+            socket.on('playerMoved', (data) => { if(players[data.id]) players[data.id] = data.player; draw(); });
+            socket.on('disconnectPlayer', (id) => { delete players[id]; draw(); });
+
+            window.addEventListener('keydown', (e) => {
+                if (!myId || !players[myId]) return;
+                let moved = false;
+                const speed = 5;
+                if (e.key === 'ArrowUp' || e.key === 'z') { players[myId].y -= speed; moved = true; }
+                if (e.key === 'ArrowDown' || e.key === 's') { players[myId].y += speed; moved = true; }
+                if (e.key === 'ArrowLeft' || e.key === 'q') { players[myId].x -= speed; moved = true; }
+                if (e.key === 'ArrowRight' || e.key === 'd') { players[myId].x += speed; moved = true; }
+
+                if (moved) {
+                    socket.emit('playerMovement', { x: players[myId].x, y: players[myId].y });
+                    draw();
+                }
+            });
+        }
 
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -42,21 +152,6 @@
                 }
             }
         }
-
-        window.addEventListener('keydown', (e) => {
-            if (!myId || !players[myId]) return;
-            let moved = false;
-            const speed = 5;
-            if (e.key === 'ArrowUp' || e.key === 'z') { players[myId].y -= speed; moved = true; }
-            if (e.key === 'ArrowDown' || e.key === 's') { players[myId].y += speed; moved = true; }
-            if (e.key === 'ArrowLeft' || e.key === 'q') { players[myId].x -= speed; moved = true; }
-            if (e.key === 'ArrowRight' || e.key === 'd') { players[myId].x += speed; moved = true; }
-
-            if (moved) {
-                socket.emit('playerMovement', { x: players[myId].x, y: players[myId].y });
-                draw();
-            }
-        });
     </script>
 </body>
 </html>
