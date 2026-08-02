@@ -13,13 +13,13 @@
             overflow: hidden;
         }
 
-        /* Styles de l'écran d'accueil */
+        /* Styles du Menu Principal */
         #mainMenu {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(20, 20, 20, 0.9);
+            background: rgba(20, 20, 20, 0.95);
             padding: 40px;
             border-radius: 15px;
             border: 2px solid #444;
@@ -59,9 +59,9 @@
         }
         .btn-return:hover { background: #c82333; }
 
-        /* Styles pour le jeu */
+        /* Style Zone de Jeu */
         #gameArea { display: none; margin-top: 20px; }
-        canvas { background: #222; border: 2px solid #555; display: block; margin: 10px auto; }
+        canvas { background: #222; border: 2px solid #555; display: block; margin: 10px auto; image-rendering: pixelated; }
         
         /* Fenêtres Modales / Pop-ups */
         .modal {
@@ -69,13 +69,13 @@
             position: absolute;
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            background: #222;
+            background: #1e1e1e;
             padding: 25px;
             border-radius: 12px;
-            border: 2px solid #666;
-            box-shadow: 0 0 15px rgba(0,0,0,0.9);
+            border: 2px solid #555;
+            box-shadow: 0 0 20px rgba(0,0,0,0.9);
             z-index: 10;
-            width: 280px;
+            width: 320px;
         }
 
         .modal-buttons {
@@ -95,7 +95,6 @@
             font-weight: bold;
             width: 50%;
         }
-        .btn-confirm-yes:hover { background: #c82333; }
 
         .btn-confirm-no {
             background: #6c757d;
@@ -107,7 +106,35 @@
             font-weight: bold;
             width: 50%;
         }
-        .btn-confirm-no:hover { background: #5a6268; }
+
+        /* Personnalisation du Personnage */
+        .option-group {
+            margin: 15px 0;
+            text-align: left;
+        }
+        .option-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #aaa;
+        }
+        .option-group select, .option-group input[type="color"] {
+            width: 100%;
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #444;
+            background: #333;
+            color: white;
+            font-size: 16px;
+        }
+        #previewCanvas {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 8px;
+            margin: 10px auto;
+            display: block;
+            image-rendering: pixelated;
+        }
     </style>
 </head>
 <body>
@@ -134,15 +161,31 @@
 
     <!-- FENÊTRE PERSONNAGE -->
     <div id="characterModal" class="modal">
-        <h2>👤 Choix du Personnage</h2>
-        <p>Sélectionne ton style ou ton pseudo (À venir)</p>
-        <button class="menu-btn btn-secondary" onclick="closeModal('characterModal')">Fermer</button>
+        <h2>👤 Personnalisation</h2>
+        
+        <!-- Aperçu Pixel Art -->
+        <canvas id="previewCanvas" width="80" height="100"></canvas>
+
+        <div class="option-group">
+            <label>Genre / Style :</label>
+            <select id="genderSelect" onchange="updateCharacterConfig()">
+                <option value="male">Garçon (Cheveux courts)</option>
+                <option value="female">Fille (Cheveux mechés)</option>
+            </select>
+        </div>
+
+        <div class="option-group">
+            <label>Couleur du Vêtement :</label>
+            <input type="color" id="jacketColor" value="#2b6cb0" onchange="updateCharacterConfig()">
+        </div>
+
+        <button class="menu-btn" onclick="closeModal('characterModal')">💾 Sauvegarder</button>
     </div>
 
     <!-- FENÊTRE RÉGLAGES -->
     <div id="settingsModal" class="modal">
         <h2>⚙️ Réglages</h2>
-        <p>Volume, Contrôles, Graphismes (À venir)</p>
+        <p>Volume, Touches du clavier (À venir)</p>
         <button class="menu-btn btn-secondary" onclick="closeModal('settingsModal')">Fermer</button>
     </div>
 
@@ -154,6 +197,83 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
+        // Configuration du Personnage Joueur
+        let charConfig = {
+            gender: 'male',
+            jacketColor: '#2b6cb0'
+        };
+
+        // Mise à jour de la config & de l'aperçu
+        function updateCharacterConfig() {
+            charConfig.gender = document.getElementById('genderSelect').value;
+            charConfig.jacketColor = document.getElementById('jacketColor').value;
+            drawPreview();
+            
+            // Envoyer la nouvelle apparence au serveur si en jeu
+            if (socket && myId && players[myId]) {
+                players[myId].config = charConfig;
+                socket.emit('playerMovement', { x: players[myId].x, y: players[myId].y, config: charConfig });
+            }
+        }
+
+        // Dessiner le Sprite Pixel Art personnalisé
+        function drawPixelSprite(ctx, x, y, config, scale = 1) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.scale(scale, scale);
+
+            const jacket = config ? config.jacketColor : '#2b6cb0';
+            const isFemale = config && config.gender === 'female';
+
+            // Bottes / Pantalon sombre
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(6, 26, 6, 8);
+            ctx.fillRect(14, 26, 6, 8);
+
+            // Haut / Chemise intérieure
+            ctx.fillStyle = '#5a1e2d';
+            ctx.fillRect(10, 16, 6, 10);
+
+            // Veste Style Anime / Pixel (Comme l'image)
+            ctx.fillStyle = jacket;
+            ctx.fillRect(5, 14, 5, 12);  // Côté gauche
+            ctx.fillRect(16, 14, 5, 12); // Côté droit
+            ctx.fillRect(7, 12, 12, 4);  // Épaules / Col
+
+            // Tête / Peau
+            ctx.fillStyle = '#ffdbac';
+            ctx.fillRect(7, 4, 12, 10);
+
+            // Yeux
+            ctx.fillStyle = '#3182ce';
+            ctx.fillRect(13, 7, 2, 3);
+
+            // Cheveux (Garçon vs Fille)
+            ctx.fillStyle = '#2d3748';
+            if (isFemale) {
+                // Cheveux longs / Mèche
+                ctx.fillRect(5, 1, 16, 5);
+                ctx.fillRect(4, 5, 4, 10);
+                ctx.fillRect(18, 5, 4, 8);
+            } else {
+                // Cheveux ébouriffés
+                ctx.fillRect(6, 1, 14, 5);
+                ctx.fillRect(4, 3, 4, 4);
+                ctx.fillRect(16, 3, 4, 4);
+            }
+
+            ctx.restore();
+        }
+
+        // Dessiner l'aperçu dans la modale Personnage
+        function drawPreview() {
+            const pCanvas = document.getElementById('previewCanvas');
+            const pCtx = pCanvas.getContext('2d');
+            pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+            // Dessiner un sprite agrandi x2.5
+            drawPixelSprite(pCtx, 10, 10, charConfig, 2.5);
+        }
+
         // Fonctions du Menu
         function startGame() {
             document.getElementById('mainMenu').style.display = 'none';
@@ -163,19 +283,18 @@
             }
         }
 
-        // Demander la confirmation
-        function askExit() {
-            openModal('confirmExitModal');
-        }
+        function askExit() { openModal('confirmExitModal'); }
 
-        // Valider la sortie vers le menu
         function confirmExit() {
             closeModal('confirmExitModal');
             document.getElementById('gameArea').style.display = 'none';
             document.getElementById('mainMenu').style.display = 'block';
         }
 
-        function openModal(id) { document.getElementById(id).style.display = 'block'; }
+        function openModal(id) { 
+            document.getElementById(id).style.display = 'block'; 
+            if(id === 'characterModal') drawPreview();
+        }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
         // Code du Jeu
@@ -195,7 +314,6 @@
             socket.on('disconnectPlayer', (id) => { delete players[id]; draw(); });
 
             window.addEventListener('keydown', (e) => {
-                // Si le jeu n'est pas affiché ou si une fenêtre de confirmation est ouverte, on ignore les touches
                 if (document.getElementById('gameArea').style.display === 'none') return;
                 if (document.getElementById('confirmExitModal').style.display === 'block') return;
                 if (!myId || !players[myId]) return;
@@ -208,7 +326,11 @@
                 if (e.key === 'ArrowRight' || e.key === 'd') { players[myId].x += speed; moved = true; }
 
                 if (moved) {
-                    socket.emit('playerMovement', { x: players[myId].x, y: players[myId].y });
+                    socket.emit('playerMovement', { 
+                        x: players[myId].x, 
+                        y: players[myId].y,
+                        config: charConfig 
+                    });
                     draw();
                 }
             });
@@ -218,15 +340,21 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             for (let id in players) {
                 const p = players[id];
-                ctx.fillStyle = p.color;
-                ctx.fillRect(p.x, p.y, 20, 20);
+                // Dessiner le personnage personnalisé en Pixel Art
+                drawPixelSprite(ctx, p.x, p.y, p.config || charConfig, 1.2);
+
+                // Indicateur pour son propre personnage
                 if (id === myId) {
-                    ctx.strokeStyle = 'white';
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(p.x, p.y, 20, 20);
+                    ctx.fillStyle = '#00ffcc';
+                    ctx.beginPath();
+                    ctx.arc(p.x + 15, p.y - 5, 4, 0, Math.PI * 2);
+                    ctx.fill();
                 }
             }
         }
+
+        // Initialiser l'aperçu au chargement
+        window.onload = () => { drawPreview(); };
     </script>
 </body>
 </html>
