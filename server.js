@@ -11,7 +11,7 @@ app.use(express.static('public'));
 let players = {};
 
 io.on('connection', (socket) => {
-    console.log('Un joueur s'est connecté :', socket.id);
+    console.log("Un joueur s'est connecté :", socket.id);
 
     // Création du joueur avec une position de départ
     players[socket.id] = {
@@ -36,7 +36,7 @@ io.on('connection', (socket) => {
 
     // Déconnexion
     socket.on('disconnect', () => {
-        console.log('Joueur déconnecté :', socket.id);
+        console.log("Joueur déconnecté :", socket.id);
         delete players[socket.id];
         io.emit('disconnectPlayer', socket.id);
     });
