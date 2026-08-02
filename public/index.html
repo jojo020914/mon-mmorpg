@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Mon MMORPG Web</title>
+    <style>
+        body { margin: 0; background: #111; color: white; text-align: center; font-family: sans-serif; }
+        canvas { background: #222; border: 2px solid #555; display: block; margin: 20px auto; }
+    </style>
+</head>
+<body>
+    <h1>🕹️ Bienvenue dans mon MMORPG !</h1>
+    <p>Utilise les flèches du clavier ou ZQSD pour te déplacer.</p>
+    <canvas id="gameCanvas" width="600" height="400"></canvas>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let players = {};
+        let myId = null;
+
+        socket.on('connect', () => { myId = socket.id; });
+
+        socket.on('currentPlayers', (serverPlayers) => { players = serverPlayers; draw(); });
+        socket.on('newPlayer', (data) => { players[data.id] = data.player; draw(); });
+        socket.on('playerMoved', (data) => { if(players[data.id]) players[data.id] = data.player; draw(); });
+        socket.on('disconnectPlayer', (id) => { delete players[id]; draw(); });
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let id in players) {
+                const p = players[id];
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x, p.y, 20, 20);
+                if (id === myId) {
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(p.x, p.y, 20, 20);
+                }
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (!myId || !players[myId]) return;
+            let moved = false;
+            const speed = 5;
+            if (e.key === 'ArrowUp' || e.key === 'z') { players[myId].y -= speed; moved = true; }
+            if (e.key === 'ArrowDown' || e.key === 's') { players[myId].y += speed; moved = true; }
+            if (e.key === 'ArrowLeft' || e.key === 'q') { players[myId].x -= speed; moved = true; }
+            if (e.key === 'ArrowRight' || e.key === 'd') { players[myId].x += speed; moved = true; }
+
+            if (moved) {
+                socket.emit('playerMovement', { x: players[myId].x, y: players[myId].y });
+                draw();
+            }
+        });
+    </script>
+</body>
+</html>
