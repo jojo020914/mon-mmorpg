@@ -13,7 +13,7 @@
             overflow: hidden;
         }
 
-        /* Styles du Menu Principal */
+        /* Menu Principal */
         #mainMenu {
             position: absolute;
             top: 50%;
@@ -59,11 +59,9 @@
         }
         .btn-return:hover { background: #c82333; }
 
-        /* Style Zone de Jeu */
         #gameArea { display: none; margin-top: 20px; }
         canvas { background: #222; border: 2px solid #555; display: block; margin: 10px auto; image-rendering: pixelated; }
         
-        /* Fenêtres Modales / Pop-ups */
         .modal {
             display: none;
             position: absolute;
@@ -107,7 +105,6 @@
             width: 50%;
         }
 
-        /* Personnalisation du Personnage */
         .option-group {
             margin: 15px 0;
             text-align: left;
@@ -149,7 +146,7 @@
         <button class="menu-btn btn-secondary" onclick="openModal('settingsModal')">⚙️ RÉGLAGES</button>
     </div>
 
-    <!-- FENÊTRE CONFIRMATION QUITTER -->
+    <!-- CONFIRMATION QUITTER -->
     <div id="confirmExitModal" class="modal">
         <h2>⚠️ Confirmation</h2>
         <p>Es-tu sûr de vouloir retourner au menu principal ?</p>
@@ -159,33 +156,32 @@
         </div>
     </div>
 
-    <!-- FENÊTRE PERSONNAGE -->
+    <!-- PERSONNALISATION DU PERSONNAGE -->
     <div id="characterModal" class="modal">
-        <h2>👤 Personnalisation</h2>
+        <h2>👤 Choix du Skin</h2>
         
-        <!-- Aperçu Pixel Art -->
-        <canvas id="previewCanvas" width="80" height="100"></canvas>
+        <canvas id="previewCanvas" width="96" height="112"></canvas>
 
         <div class="option-group">
-            <label>Genre / Style :</label>
+            <label>Modèle de Personnage :</label>
             <select id="genderSelect" onchange="updateCharacterConfig()">
-                <option value="male">Garçon (Cheveux courts)</option>
-                <option value="female">Fille (Cheveux mechés)</option>
+                <option value="kazuma">Kazuma (Aventurier)</option>
+                <option value="aqua">Aqua (Déesse / Fille)</option>
             </select>
         </div>
 
         <div class="option-group">
-            <label>Couleur du Vêtement :</label>
-            <input type="color" id="jacketColor" value="#2b6cb0" onchange="updateCharacterConfig()">
+            <label>Couleur du Vêtement / Cape :</label>
+            <input type="color" id="jacketColor" value="#2b7a78" onchange="updateCharacterConfig()">
         </div>
 
-        <button class="menu-btn" onclick="closeModal('characterModal')">💾 Sauvegarder</button>
+        <button class="menu-btn" onclick="closeModal('characterModal')">💾 Valider</button>
     </div>
 
-    <!-- FENÊTRE RÉGLAGES -->
+    <!-- RÉGLAGES -->
     <div id="settingsModal" class="modal">
         <h2>⚙️ Réglages</h2>
-        <p>Volume, Touches du clavier (À venir)</p>
+        <p>Options audio et vidéo (À venir)</p>
         <button class="menu-btn btn-secondary" onclick="closeModal('settingsModal')">Fermer</button>
     </div>
 
@@ -197,90 +193,114 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        // Configuration du Personnage Joueur
         let charConfig = {
-            gender: 'male',
-            jacketColor: '#2b6cb0'
+            gender: 'kazuma',
+            jacketColor: '#2b7a78'
         };
 
-        // Mise à jour de la config & de l'aperçu
         function updateCharacterConfig() {
             charConfig.gender = document.getElementById('genderSelect').value;
             charConfig.jacketColor = document.getElementById('jacketColor').value;
             drawPreview();
             
-            // Envoyer la nouvelle apparence au serveur si en jeu
             if (socket && myId && players[myId]) {
                 players[myId].config = charConfig;
                 socket.emit('playerMovement', { x: players[myId].x, y: players[myId].y, config: charConfig });
             }
         }
 
-        // Dessiner le Sprite Pixel Art personnalisé
-        function drawPixelSprite(ctx, x, y, config, scale = 1) {
+        // DESSIN DES SKINS PIXEL ART (Kazuma & Aqua)
+        function drawPixelSprite(ctx, x, y, config, scale = 1.5) {
             ctx.save();
             ctx.translate(x, y);
             ctx.scale(scale, scale);
 
-            const jacket = config ? config.jacketColor : '#2b6cb0';
-            const isFemale = config && config.gender === 'female';
+            const mainColor = config ? config.jacketColor : '#2b7a78';
+            const isAqua = config && config.gender === 'aqua';
 
-            // Bottes / Pantalon sombre
-            ctx.fillStyle = '#1a1a1a';
-            ctx.fillRect(6, 26, 6, 8);
-            ctx.fillRect(14, 26, 6, 8);
+            if (!isAqua) {
+                // === SKIN KAZUMA ===
+                // Mèche du haut
+                ctx.fillStyle = '#221815'; ctx.fillRect(11, 0, 2, 2);
+                ctx.fillStyle = '#6e4733'; ctx.fillRect(9, 2, 5, 2);
 
-            // Haut / Chemise intérieure
-            ctx.fillStyle = '#5a1e2d';
-            ctx.fillRect(10, 16, 6, 10);
+                // Cheveux Bruns
+                ctx.fillStyle = '#6e4733';
+                ctx.fillRect(5, 4, 13, 5);
+                ctx.fillRect(3, 7, 16, 5);
+                ctx.fillRect(2, 10, 4, 3);
+                ctx.fillRect(17, 10, 4, 3);
 
-            // Veste Style Anime / Pixel (Comme l'image)
-            ctx.fillStyle = jacket;
-            ctx.fillRect(5, 14, 5, 12);  // Côté gauche
-            ctx.fillRect(16, 14, 5, 12); // Côté droit
-            ctx.fillRect(7, 12, 12, 4);  // Épaules / Col
+                // Visage / Peau
+                ctx.fillStyle = '#ffded0'; ctx.fillRect(5, 11, 13, 7);
+                ctx.fillRect(4, 13, 14, 3);
 
-            // Tête / Peau
-            ctx.fillStyle = '#ffdbac';
-            ctx.fillRect(7, 4, 12, 10);
+                // Yeux Verts
+                ctx.fillStyle = '#3db08e';
+                ctx.fillRect(6, 14, 3, 2);
+                ctx.fillRect(14, 14, 3, 2);
 
-            // Yeux
-            ctx.fillStyle = '#3182ce';
-            ctx.fillRect(13, 7, 2, 3);
+                // Cape / Vêtement (Couleur personnalisable)
+                ctx.fillStyle = mainColor;
+                ctx.fillRect(3, 18, 17, 8);
+                ctx.fillRect(2, 22, 19, 5);
 
-            // Cheveux (Garçon vs Fille)
-            ctx.fillStyle = '#2d3748';
-            if (isFemale) {
-                // Cheveux longs / Mèche
-                ctx.fillRect(5, 1, 16, 5);
-                ctx.fillRect(4, 5, 4, 10);
-                ctx.fillRect(18, 5, 4, 8);
+                // Col / Chemise Blanche & Ceinture
+                ctx.fillStyle = '#ffffff'; ctx.fillRect(9, 18, 5, 5);
+                ctx.fillStyle = '#e5a93c'; ctx.fillRect(3, 18, 17, 1); ctx.fillRect(3, 22, 17, 1);
+                ctx.fillStyle = '#3a271d'; ctx.fillRect(6, 25, 11, 2);
+
+                // Pantalon & Bottes
+                ctx.fillStyle = '#ffffff'; ctx.fillRect(7, 27, 9, 2);
+                ctx.fillStyle = '#3a271d'; ctx.fillRect(7, 29, 3, 3); ctx.fillRect(13, 29, 3, 3);
+
             } else {
-                // Cheveux ébouriffés
-                ctx.fillRect(6, 1, 14, 5);
-                ctx.fillRect(4, 3, 4, 4);
-                ctx.fillRect(16, 3, 4, 4);
+                // === SKIN AQUA ===
+                // Chignon & Accessoire bleu
+                ctx.fillStyle = '#3a75c4'; ctx.fillRect(8, 0, 7, 3);
+                ctx.fillStyle = '#9bdcf2'; ctx.fillRect(7, 1, 9, 2);
+
+                // Cheveux Bleus
+                ctx.fillStyle = '#9bdcf2';
+                ctx.fillRect(4, 3, 15, 6);
+                ctx.fillRect(3, 8, 17, 6);
+                ctx.fillRect(2, 13, 3, 10); ctx.fillRect(18, 13, 3, 10); // Meches longues
+                ctx.fillRect(19, 6, 4, 4); // Chignon coté
+
+                // Visage
+                ctx.fillStyle = '#ffded0'; ctx.fillRect(6, 10, 11, 6);
+                // Yeux Bleus
+                ctx.fillStyle = '#3a75c4';
+                ctx.fillRect(7, 12, 2, 3);
+                ctx.fillRect(14, 12, 2, 3);
+
+                // Robe (Couleur personnalisable)
+                ctx.fillStyle = mainColor;
+                ctx.fillRect(5, 16, 13, 10);
+                ctx.fillRect(3, 20, 17, 6);
+
+                // Nœud / Poitrine & Ceinture
+                ctx.fillStyle = '#ffffff'; ctx.fillRect(8, 17, 7, 5);
+                ctx.fillStyle = '#e5a93c'; ctx.fillRect(6, 23, 11, 2);
+
+                // Bottes Sombres
+                ctx.fillStyle = '#221d3a'; ctx.fillRect(7, 26, 3, 5); ctx.fillRect(13, 26, 3, 5);
             }
 
             ctx.restore();
         }
 
-        // Dessiner l'aperçu dans la modale Personnage
         function drawPreview() {
             const pCanvas = document.getElementById('previewCanvas');
             const pCtx = pCanvas.getContext('2d');
             pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
-            // Dessiner un sprite agrandi x2.5
-            drawPixelSprite(pCtx, 10, 10, charConfig, 2.5);
+            drawPixelSprite(pCtx, 12, 10, charConfig, 3);
         }
 
-        // Fonctions du Menu
         function startGame() {
             document.getElementById('mainMenu').style.display = 'none';
             document.getElementById('gameArea').style.display = 'block';
-            if (!socket) {
-                initGame();
-            }
+            if (!socket) initGame();
         }
 
         function askExit() { openModal('confirmExitModal'); }
@@ -297,7 +317,6 @@
         }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
-        // Code du Jeu
         let socket, canvas, ctx;
         let players = {};
         let myId = null;
@@ -319,7 +338,7 @@
                 if (!myId || !players[myId]) return;
 
                 let moved = false;
-                const speed = 5;
+                const speed = 6;
                 if (e.key === 'ArrowUp' || e.key === 'z') { players[myId].y -= speed; moved = true; }
                 if (e.key === 'ArrowDown' || e.key === 's') { players[myId].y += speed; moved = true; }
                 if (e.key === 'ArrowLeft' || e.key === 'q') { players[myId].x -= speed; moved = true; }
@@ -340,20 +359,17 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             for (let id in players) {
                 const p = players[id];
-                // Dessiner le personnage personnalisé en Pixel Art
-                drawPixelSprite(ctx, p.x, p.y, p.config || charConfig, 1.2);
+                drawPixelSprite(ctx, p.x, p.y, p.config || charConfig, 1.3);
 
-                // Indicateur pour son propre personnage
                 if (id === myId) {
                     ctx.fillStyle = '#00ffcc';
                     ctx.beginPath();
-                    ctx.arc(p.x + 15, p.y - 5, 4, 0, Math.PI * 2);
+                    ctx.arc(p.x + 16, p.y - 6, 4, 0, Math.PI * 2);
                     ctx.fill();
                 }
             }
         }
 
-        // Initialiser l'aperçu au chargement
         window.onload = () => { drawPreview(); };
     </script>
 </body>
